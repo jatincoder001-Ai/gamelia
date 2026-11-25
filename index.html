@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>ECHO SHIFT — Temporal Puzzle Platformer</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="game-root">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Subtle atmospheric scanline & vignette overlay -->
+    <div class="crt-overlay" aria-hidden="true"></div>
+
+    <!-- IN-GAME HUD -->
+    <div id="hud" class="hud hidden" aria-live="polite">
+      <div class="hud-top">
+        <div class="hud-panel hud-level-info">
+          <div class="hud-label">SECTOR</div>
+          <div class="hud-value" id="hud-level-name">01 // AWAKENING</div>
+        </div>
+
+        <div class="hud-panel hud-echo-panel">
+          <div class="echo-status-row">
+            <span class="echo-dot" id="hud-echo-dot"></span>
+            <span class="hud-label" id="hud-echo-label">TEMPORAL BUFFER</span>
+            <span class="hud-timer" id="hud-echo-timer">0.0s</span>
+          </div>
+          <div class="echo-bar-track">
+            <div class="echo-bar-fill" id="hud-buffer-bar"></div>
+            <div class="echo-bar-playback" id="hud-playback-bar"></div>
+          </div>
+          <div class="echo-hint" id="hud-echo-hint">PRESS [E] TO DEPLOY ECHO</div>
+        </div>
+
+        <div class="hud-actions">
+          <button class="hud-icon-btn" id="btn-hud-restart" title="Restart Sector (R)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            <span>R</span>
+          </button>
+          <button class="hud-icon-btn" id="btn-hud-pause" title="Pause (ESC)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="6" y="4" width="4" height="16" rx="1" />
+              <rect x="14" y="4" width="4" height="16" rx="1" />
+            </svg>
+            <span>ESC</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Touch Controls (auto-shown on touch devices or when enabled) -->
+      <div id="touch-controls" class="touch-controls hidden" aria-label="Touch Controls">
+        <div class="touch-group touch-left-group">
+          <button class="touch-btn" id="touch-left" aria-label="Move Left">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <button class="touch-btn" id="touch-right" aria-label="Move Right">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+        <div class="touch-group touch-right-group">
+          <button class="touch-btn touch-btn-echo" id="touch-echo" aria-label="Deploy Echo">
+            <span class="touch-btn-label">ECHO</span>
+          </button>
+          <button class="touch-btn touch-btn-jump" id="touch-jump" aria-label="Jump">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Subtle bottom control bar -->
+      <div class="hud-bottom" id="hud-bottom-keys">
+        <div class="hud-control-pill"><kbd>A</kbd><kbd>D</kbd> MOVE</div>
+        <div class="hud-control-pill"><kbd>SPACE</kbd> JUMP</div>
+        <div class="hud-control-pill"><kbd>E</kbd> ECHO</div>
+        <div class="hud-control-pill"><kbd>R</kbd> RESET</div>
+      </div>
+    </div>
+
+    <!-- TITLE SCREEN -->
+    <section id="screen-title" class="screen-overlay active">
+      <div class="title-container">
+        <div class="title-badge">FACILITY-09 // TEMPORAL ARCHIVE</div>
+
+        <!-- Custom SVG Logo -->
+        <div class="logo-wrap">
+          <svg class="echo-logo" viewBox="0 0 640 140" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ECHO SHIFT">
+            <defs>
+              <linearGradient id="logoGradMain" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#e0f7fa" />
+                <stop offset="45%" stop-color="#38bdf8" />
+                <stop offset="100%" stop-color="#2dd4bf" />
+              </linearGradient>
+              <linearGradient id="logoGradEcho" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.45" />
+                <stop offset="100%" stop-color="#a855f7" stop-opacity="0.35" />
+              </linearGradient>
+              <filter id="logoGlow" x="-15%" y="-25%" width="130%" height="150%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <!-- Holographic Echo ghost offset -->
+            <text x="326" y="88" text-anchor="middle" font-family="'Segoe UI', 'Orbitron', system-ui, sans-serif" font-weight="900" font-size="74" letter-spacing="12" fill="none" stroke="url(#logoGradEcho)" stroke-width="2" stroke-dasharray="8 4">ECHO SHIFT</text>
+            <!-- Main illuminated title -->
+            <text x="320" y="84" text-anchor="middle" font-family="'Segoe UI', 'Orbitron', system-ui, sans-serif" font-weight="900" font-size="74" letter-spacing="12" fill="url(#logoGradMain)" filter="url(#logoGlow)">ECHO SHIFT</text>
+            <!-- Accent underline & reticle ticks -->
+            <line x1="90" y1="108" x2="550" y2="108" stroke="#2dd4bf" stroke-opacity="0.45" stroke-width="1.5" />
+            <rect x="308" y="104" width="24" height="8" fill="#38bdf8" rx="1" />
+            <circle cx="90" cy="108" r="3" fill="#f59e0b" />
+            <circle cx="550" cy="108" r="3" fill="#2dd4bf" />
+          </svg>
+        </div>
+
+        <p class="title-subtitle">
+          Record your past. Project your holographic Echo. Escape the abandoned facility.
+        </p>
+
+        <div class="menu-stack">
+          <button class="sci-btn sci-btn-primary" id="btn-start-game">
+            <span class="btn-accent"></span>
+            <span class="btn-text">INITIATE SEQUENCE</span>
+            <span class="btn-tag">PLAY</span>
+          </button>
+          <button class="sci-btn" id="btn-level-select">
+            <span class="btn-accent"></span>
+            <span class="btn-text">SECTOR SELECT</span>
+            <span class="btn-tag">01-05</span>
+          </button>
+          <button class="sci-btn" id="btn-controls">
+            <span class="btn-accent"></span>
+            <span class="btn-text">FIELD MANUAL</span>
+            <span class="btn-tag">CONTROLS</span>
+          </button>
+          <button class="sci-btn" id="btn-settings">
+            <span class="btn-accent"></span>
+            <span class="btn-text">SYSTEM AUDIO &amp; FX</span>
+            <span class="btn-tag">SETTINGS</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEVEL SELECT SCREEN -->
+    <section id="screen-levels" class="screen-overlay">
+      <div class="panel-card panel-wide">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">FACILITY-09 NAVIGATION</div>
+            <h2 class="panel-title">SECTOR SELECT</h2>
+          </div>
+          <button class="sci-btn sci-btn-sm" id="btn-levels-back">BACK</button>
+        </div>
+        <div class="level-grid" id="level-grid">
+          <!-- Populated dynamically by main.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTROLS / FIELD MANUAL SCREEN -->
+    <section id="screen-controls" class="screen-overlay">
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">SUIT TELEMETRY</div>
+            <h2 class="panel-title">FIELD MANUAL</h2>
+          </div>
+          <button class="sci-btn sci-btn-sm" id="btn-controls-back">BACK</button>
+        </div>
+        <div class="controls-grid">
+          <div class="control-item">
+            <div class="key-group"><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd></div>
+            <div class="control-desc">Move left / right across facility structures</div>
+          </div>
+          <div class="control-item">
+            <div class="key-group"><kbd>SPACE</kbd> or <kbd>W</kbd> / <kbd>↑</kbd></div>
+            <div class="control-desc">Suit thruster jump (hold briefly for higher arc)</div>
+          </div>
+          <div class="control-item control-highlight">
+            <div class="key-group"><kbd>E</kbd></div>
+            <div class="control-desc">
+              <strong>Deploy Temporal Echo:</strong> Spawns a holographic Echo that replays your last 5 seconds of movement and holds pressure switches.
+            </div>
+          </div>
+          <div class="control-item">
+            <div class="key-group"><kbd>R</kbd></div>
+            <div class="control-desc">Quick-reset current sector</div>
+          </div>
+          <div class="control-item">
+            <div class="key-group"><kbd>ESC</kbd></div>
+            <div class="control-desc">Pause simulation / access system menu</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS SCREEN -->
+    <section id="screen-settings" class="screen-overlay">
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">SYSTEM CONFIGURATION</div>
+            <h2 class="panel-title">AUDIO &amp; VISUALS</h2>
+          </div>
+          <button class="sci-btn sci-btn-sm" id="btn-settings-back">BACK</button>
+        </div>
+        <div class="settings-list">
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Master Audio</div>
+              <div class="setting-sub">Enable or mute all synthesized sound</div>
+            </div>
+            <button class="toggle-btn active" id="toggle-mute">ENABLED</button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Sound Effects Volume</div>
+              <div class="setting-sub">Footsteps, thrusters, Echo glitch, doors</div>
+            </div>
+            <input type="range" id="slider-sfx" min="0" max="100" value="80" class="sci-slider" />
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Ambient Facility Drone</div>
+              <div class="setting-sub">Procedural atmospheric synth pad</div>
+            </div>
+            <input type="range" id="slider-ambient" min="0" max="100" value="55" class="sci-slider" />
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Screen Shake</div>
+              <div class="setting-sub">Camera impact on Echo spawn &amp; hazards</div>
+            </div>
+            <button class="toggle-btn active" id="toggle-shake">ON</button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Touch Controls</div>
+              <div class="setting-sub">On-screen buttons for phone &amp; tablet</div>
+            </div>
+            <button class="toggle-btn active" id="toggle-touch">AUTO</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAUSE OVERLAY -->
+    <section id="screen-pause" class="screen-overlay">
+      <div class="panel-card panel-compact">
+        <div class="panel-kicker">SIMULATION SUSPENDED</div>
+        <h2 class="panel-title">PAUSED</h2>
+        <div class="menu-stack">
+          <button class="sci-btn sci-btn-primary" id="btn-resume">
+            <span class="btn-accent"></span>
+            <span class="btn-text">RESUME</span>
+          </button>
+          <button class="sci-btn" id="btn-pause-restart">
+            <span class="btn-accent"></span>
+            <span class="btn-text">RESTART SECTOR</span>
+          </button>
+          <button class="sci-btn" id="btn-pause-settings">
+            <span class="btn-accent"></span>
+            <span class="btn-text">SETTINGS</span>
+          </button>
+          <button class="sci-btn sci-btn-danger" id="btn-pause-quit">
+            <span class="btn-accent"></span>
+            <span class="btn-text">EXIT TO TITLE</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEVEL COMPLETE OVERLAY -->
+    <section id="screen-complete" class="screen-overlay">
+      <div class="panel-card panel-compact">
+        <div class="panel-kicker">PORTAL SYNCHRONIZED</div>
+        <h2 class="panel-title" id="complete-title">SECTOR CLEARED</h2>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-label">TIME</div>
+            <div class="stat-val" id="complete-time">00.0s</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">ECHOES USED</div>
+            <div class="stat-val" id="complete-echoes">0</div>
+          </div>
+        </div>
+        <div class="menu-stack">
+          <button class="sci-btn sci-btn-primary" id="btn-next-level">
+            <span class="btn-accent"></span>
+            <span class="btn-text">NEXT SECTOR</span>
+          </button>
+          <button class="sci-btn" id="btn-replay-level">
+            <span class="btn-accent"></span>
+            <span class="btn-text">REPLAY SECTOR</span>
+          </button>
+          <button class="sci-btn" id="btn-complete-menu">
+            <span class="btn-accent"></span>
+            <span class="btn-text">SECTOR SELECT</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL VICTORY OVERLAY -->
+    <section id="screen-victory" class="screen-overlay">
+      <div class="panel-card">
+        <div class="panel-kicker">CORE SHUTDOWN COMPLETE // ESCAPE VERIFIED</div>
+        <h2 class="panel-title victory-title">FACILITY ESCAPED</h2>
+        <p class="victory-copy">
+          All temporal locks disengaged. You and your Echoes outmaneuvered Facility-09's failing core and breached the surface extraction portal.
+        </p>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-label">TOTAL TIME</div>
+            <div class="stat-val" id="victory-time">00.0s</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">TOTAL ECHOES</div>
+            <div class="stat-val" id="victory-echoes">0</div>
+          </div>
+        </div>
+        <div class="menu-stack">
+          <button class="sci-btn sci-btn-primary" id="btn-victory-replay">
+            <span class="btn-accent"></span>
+            <span class="btn-text">PLAY AGAIN</span>
+          </button>
+          <button class="sci-btn" id="btn-victory-menu">
+            <span class="btn-accent"></span>
+            <span class="btn-text">MAIN MENU</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Ordered scripts for reliable file:// and localhost execution -->
+  <script src="js/audio.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
